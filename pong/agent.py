@@ -37,11 +37,11 @@ class DQNAgent:
         batch = Transition(*zip(*transitions))
 
         # Compute the expected Q-values using the target network
-        non_final_mask = T.tensor(tuple(map(lambda s: s is not None, batch.next_state)), dtype=T.int)
-        non_final_next_states = T.tensor([s for s in batch.next_state if s is not None])
-        state_batch = T.tensor(batch.state)
-        action_batch = T.tensor(batch.action)
-        reward_batch = T.tensor(batch.reward)
+        non_final_mask = T.tensor(tuple(map(lambda s: s is not None, batch.next_state)), dtype=T.long)
+        non_final_next_states = T.tensor([s for s in batch.next_state if s is not None], dtype=T.long)
+        state_batch = T.tensor(batch.state, dtype=T.long)
+        action_batch = T.tensor(batch.action, dtype=T.float)
+        reward_batch = T.tensor(batch.reward, dtype=T.long)
 
         q_values = self.q_network(state_batch)
         next_q_values = T.zeros(batch_size)
