@@ -1,6 +1,7 @@
 import torch as T
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 import numpy as np
 
 # ! A Machine-learning algorithm
@@ -26,7 +27,7 @@ class DeepQNetwork(nn.Module):
     
     # First layer of deep q network
     # Input: self.input_dims - Output: self.fc1_dims
-    self.fc1 = nn.Linear(self.input_dims, self.fc1_dims)
+    self.fc1 = nn.Linear(self.input_dims.__len__(), self.fc1_dims)
     # Second layer of deep q network
     # Input: self.fc1_dims - Output: self.fc2_dims
     self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
@@ -38,8 +39,8 @@ class DeepQNetwork(nn.Module):
     self.loss = nn.MSELoss()
   
   def forward(self, state):
-    x = T.relu(self.fc1(state))
-    x = T.relu(self.fc2(x))
+    x = F.relu(self.fc1(state))
+    x = self.fc2(x)
     action_value = self.fc3(x)
         
     return action_value
