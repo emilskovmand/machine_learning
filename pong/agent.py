@@ -16,8 +16,8 @@ class DQNAgent:
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         
-        self.q_network = DeepQNetwork(learning_rate, input_dims, 24, 24, num_actions)
-        self.target_network = DeepQNetwork(learning_rate, input_dims, 24, 24, num_actions)
+        self.q_network = DeepQNetwork(learning_rate, input_dims, 128, 128, num_actions)
+        self.target_network = DeepQNetwork(learning_rate, input_dims, 128, 128, num_actions)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.target_network.eval()
 
@@ -37,15 +37,15 @@ class DQNAgent:
         batch = Transition(*zip(*transitions))
 
         # Compute the expected Q-values using the target network
-        non_final_mask = T.tensor(tuple(map(lambda s: s is not None, batch.next_state)), dtype=T.long)
-        non_final_next_states = T.tensor([s for s in batch.next_state if s is not None], dtype=T.long)
-        state_batch = T.tensor(batch.state, dtype=T.long)
-        action_batch = T.tensor(batch.action, dtype=T.float)
+        non_final_mask = T.tensor(tuple(map(lambda s: s is not None, batch.next_state)), dtype=T.bool)
+        non_final_next_states = T.cat([s for s in batch.next_state if s is not None])
+        state_batch = T.cat(batch.state)
+        action_batch = T.tensor(batch.action, dtype=T.long)
         reward_batch = T.tensor(batch.reward, dtype=T.long)
 
         q_values = self.q_network(state_batch)
-        next_q_values = T.zeros(batch_size)
-        next_q_values[non_final_mask] = self.target_network(non_final_next_states).max(1)[0].detach()
+        next_q_values = T.zeros(batch_size, dtype=T.long)
+        next_q_values[non_final_mask] = self.target_network(non_final_next_states).max(1)[0] # .detach()
         expected_q_values = reward_batch + self.gamma * next_q_values
 
         # Compute the Q-values for the selected actions

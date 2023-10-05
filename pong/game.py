@@ -1,6 +1,7 @@
 import pygame
 from agent import DQNAgent, ReplayBuffer
 import numpy as np
+import torch as T
 
 pygame.init()
 
@@ -146,19 +147,19 @@ def main():
 
 	# Defining the objects
 	geekAi = Striker(20, 0, 10, 100, 10, GREEN)
-	geek2 = Striker(WIDTH-30, 0, 10, 100, 10, GREEN)
+	geek = Striker(WIDTH-30, 0, 10, 100, 10, GREEN)
 	ball = Ball(WIDTH//2, HEIGHT//2, 7, 7, WHITE)
 
 	# Initial parameters of the players
 	geekAiScore, geek2Score = 0, 0
 	geek2YFac = 0
 
-	input_dims = np.concatenate((geekAi.get_state(), geek2.get_state(), ball.get_state()), dtype=int)
+	input_dims = np.concatenate((geekAi.get_state(), geek.get_state(), ball.get_state()), dtype=int)
 
 	num_actions = 3
 	dqn_agent = DQNAgent(input_dims=input_dims, num_actions=num_actions)
 
-	earlier_state = input_dims
+	earlier_state = T.tensor(input_dims, dtype=T.float32).unsqueeze(0)
 
 	while running:
 		screen.fill(BLACK)
@@ -180,16 +181,18 @@ def main():
 		if pygame.Rect.colliderect(ball.getRect(), geekAi.getRect()):
 			ball.hit()
 			aiHit = 1
-		if pygame.Rect.colliderect(ball.getRect(), geek2.getRect()):
+		if pygame.Rect.colliderect(ball.getRect(), geek.getRect()):
 			ball.hit()
 
-		game_state = np.concatenate((geekAi.get_state(), geek2.get_state(), ball.get_state()))
+		game_state = np.concatenate((geekAi.get_state(), geek.get_state(), ball.get_state()))
+
+		game_state = T.tensor(game_state, dtype=T.float32).unsqueeze(0)
 
 		action = dqn_agent.select_action(game_state)
 
 		# Updating the objects
 		geekAi.update(action - 1)
-		geek2.update(geek2YFac)
+		geek.update(geek2YFac)
 		point = ball.update()
 
 		if point == -1:
@@ -200,7 +203,7 @@ def main():
 		if point: 
 			ball.reset()
 
-		replay_buffer.push(earlier_state, action, game_state, aiHit)
+		replay_buffer.push(earlier_state, T.tensor(action, dtype=T.float32), game_state, aiHit)
 
 		earlier_state = game_state
 
@@ -208,13 +211,13 @@ def main():
 
 		# Displaying the objects on the screen
 		geekAi.display()
-		geek2.display()
+		geek.display()
 		ball.display()
 
 		# Displaying the scores of the players
-		geekAi.displayScore("Geek_1 : ", 
+		geekAi.displayScore("Geek_AI : ", 
 						geekAiScore, 100, 20, WHITE)
-		geek2.displayScore("Geek_2 : ", 
+		geek.displayScore("Geek_2 : ", 
 						geek2Score, WIDTH-100, 20, WHITE)
 
 		pygame.display.update()
