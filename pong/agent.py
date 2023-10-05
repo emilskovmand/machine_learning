@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from qlearning import DeepQNetwork
 import random
 from collections import namedtuple
+from qlearning import DeepQNetwork  # Assuming DeepQNetwork is implemented in qlearning module
 
 class DQNAgent:
     def __init__(self, input_dims, num_actions, learning_rate=0.001, gamma=0.99, epsilon=1.0, epsilon_decay=0.995):
@@ -16,8 +16,8 @@ class DQNAgent:
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         
-        self.q_network = DeepQNetwork(learning_rate, input_dims, 128, 128, num_actions)
-        self.target_network = DeepQNetwork(learning_rate, input_dims, 128, 128, num_actions)
+        self.q_network = DeepQNetwork(learning_rate, input_dims, 24, 24, num_actions)
+        self.target_network = DeepQNetwork(learning_rate, input_dims, 24, 24, num_actions)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.target_network.eval()
 
@@ -25,38 +25,42 @@ class DQNAgent:
         if np.random.rand() < self.epsilon:
             return random.randint(0, self.num_actions - 1)
         else:
-            state = T.FloatTensor(state).unsqueeze(0)
+            state = T.tensor([state], dtype=T.float32).to(self.q_network.device)
             q_values = self.q_network(state)
-            return q_values.argmax().item()
+            print("AI action", T.argmax(q_values).item())
+            return T.argmax(q_values).item()
 
     def train(self, replay_buffer, batch_size=32):
         if len(replay_buffer) < batch_size:
             return
-        
+
         transitions = replay_buffer.sample(batch_size)
         batch = Transition(*zip(*transitions))
 
         # Compute the expected Q-values using the target network
         non_final_mask = T.tensor(tuple(map(lambda s: s is not None, batch.next_state)), dtype=T.bool)
-        non_final_next_states = T.cat([s for s in batch.next_state if s is not None])
-        state_batch = T.cat(batch.state)
-        action_batch = T.tensor(batch.action, dtype=T.long)
-        reward_batch = T.tensor(batch.reward, dtype=T.long)
+        non_final_next_states = T.tensor([s for s in batch.next_state if s is not None], dtype=T.float32)
+        state_batch = T.tensor(batch.state, dtype=T.float32)
+        action_batch = T.tensor(batch.action, dtype=T.long).unsqueeze(1)
+        reward_batch = T.tensor(batch.reward, dtype=T.float32)
+
 
         q_values = self.q_network(state_batch)
-        next_q_values = T.zeros(batch_size, dtype=T.long)
-        next_q_values[non_final_mask] = self.target_network(non_final_next_states).max(1)[0] # .detach()
+        next_q_values = T.zeros(batch_size)
+        next_q_values[non_final_mask] = self.target_network(non_final_next_states).max(1)[0].detach()
         expected_q_values = reward_batch + self.gamma * next_q_values
 
         # Compute the Q-values for the selected actions
         q_values = q_values.gather(1, action_batch)
 
-        # Compute the loss and update the Q-network
+        # Compute the loss
         loss = nn.MSELoss()(q_values, expected_q_values.unsqueeze(1))
+
+        # Update the Q-network
         self.q_network.optimizer.zero_grad()
         loss.backward()
         self.q_network.optimizer.step()
-        self.q_network.loss = loss
+
 
     def update_target_network(self):
         self.target_network.load_state_dict(self.q_network.state_dict())

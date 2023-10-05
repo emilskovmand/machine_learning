@@ -159,7 +159,7 @@ def main():
 	num_actions = 3
 	dqn_agent = DQNAgent(input_dims=input_dims, num_actions=num_actions)
 
-	earlier_state = T.tensor(input_dims, dtype=T.float32).unsqueeze(0)
+	earlier_state = input_dims
 
 	while running:
 		screen.fill(BLACK)
@@ -186,8 +186,6 @@ def main():
 
 		game_state = np.concatenate((geekAi.get_state(), geek.get_state(), ball.get_state()))
 
-		game_state = T.tensor(game_state, dtype=T.float32).unsqueeze(0)
-
 		action = dqn_agent.select_action(game_state)
 
 		# Updating the objects
@@ -203,7 +201,7 @@ def main():
 		if point: 
 			ball.reset()
 
-		replay_buffer.push(earlier_state, T.tensor(action, dtype=T.float32), game_state, aiHit)
+		replay_buffer.push(earlier_state, action, game_state, aiHit)
 
 		earlier_state = game_state
 
@@ -215,9 +213,9 @@ def main():
 		ball.display()
 
 		# Displaying the scores of the players
-		geekAi.displayScore("Geek_AI : ", 
+		geekAi.displayScore("AI : ", 
 						geekAiScore, 100, 20, WHITE)
-		geek.displayScore("Geek_2 : ", 
+		geek.displayScore("User : ", 
 						geek2Score, WIDTH-100, 20, WHITE)
 
 		pygame.display.update()
