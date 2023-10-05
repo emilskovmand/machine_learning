@@ -224,3 +224,6 @@ def main():
 if __name__ == "__main__":
 	main()
 	pygame.quit()
+
+
+# Game made by teja00219 on https://www.geeksforgeeks.org/create-a-pong-game-in-python-pygame/
