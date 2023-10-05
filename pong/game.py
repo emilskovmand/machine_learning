@@ -1,4 +1,6 @@
 import pygame
+from agent import DQNAgent, ReplayBuffer
+import numpy as np
 
 pygame.init()
 
@@ -39,7 +41,7 @@ class Striker:
 	def display(self):
 		self.geek = pygame.draw.rect(screen, self.color, self.geekRect)
 
-	def update(self, yFac):
+	def update(self, yFac: int):
 		self.posy = self.posy + self.speed*yFac
 
 		# Restricting the striker to be below the top surface of the screen
@@ -51,6 +53,16 @@ class Striker:
 
 		# Updating the rect with the new values
 		self.geekRect = (self.posx, self.posy, self.width, self.height)
+
+	def get_state(self):
+
+		return np.array([
+			self.posx,
+			self.posy,
+			self.speed,
+			self.height,
+			self.width
+		], dtype=int)
 
 	def displayScore(self, text, score, x, y, color):
 		text = font20.render(text+str(score), True, color)
@@ -107,6 +119,16 @@ class Ball:
 		self.xFac *= -1
 		self.firstTime = 1
 
+	def get_state(self):
+		return np.array([
+			self.posx,
+			self.posy,
+			self.xFac,
+			self.yFac,
+			self.speed,
+			self.radius
+		], dtype=int)
+
 	# Used to reflect the ball along the X-axis
 	def hit(self):
 		self.xFac *= -1
@@ -120,16 +142,23 @@ class Ball:
 def main():
 	running = True
 
+	replay_buffer = ReplayBuffer(capacity=10000)
+
 	# Defining the objects
-	geek1 = Striker(20, 0, 10, 100, 10, GREEN)
+	geekAi = Striker(20, 0, 10, 100, 10, GREEN)
 	geek2 = Striker(WIDTH-30, 0, 10, 100, 10, GREEN)
 	ball = Ball(WIDTH//2, HEIGHT//2, 7, 7, WHITE)
 
-	listOfGeeks = [geek1, geek2]
-
 	# Initial parameters of the players
-	geek1Score, geek2Score = 0, 0
-	geek1YFac, geek2YFac = 0, 0
+	geekAiScore, geek2Score = 0, 0
+	geek2YFac = 0
+
+	input_dims = np.concatenate((geekAi.get_state(), geek2.get_state(), ball.get_state()), dtype=int)
+
+	num_actions = 3
+	dqn_agent = DQNAgent(input_dims=input_dims, num_actions=num_actions)
+
+	earlier_state = input_dims
 
 	while running:
 		screen.fill(BLACK)
@@ -143,48 +172,48 @@ def main():
 					geek2YFac = -1
 				if event.key == pygame.K_DOWN:
 					geek2YFac = 1
-				if event.key == pygame.K_w:
-					geek1YFac = -1
-				if event.key == pygame.K_s:
-					geek1YFac = 1
 			if event.type == pygame.KEYUP:
 				if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
 					geek2YFac = 0
-				if event.key == pygame.K_w or event.key == pygame.K_s:
-					geek1YFac = 0
 
-		# Collision detection
-		for geek in listOfGeeks:
-			if pygame.Rect.colliderect(ball.getRect(), geek.getRect()):
-				ball.hit()
+		aiHit = 0
+		if pygame.Rect.colliderect(ball.getRect(), geekAi.getRect()):
+			ball.hit()
+			aiHit = 1
+		if pygame.Rect.colliderect(ball.getRect(), geek2.getRect()):
+			ball.hit()
+
+		game_state = np.concatenate((geekAi.get_state(), geek2.get_state(), ball.get_state()))
+
+		action = dqn_agent.select_action(game_state)
 
 		# Updating the objects
-		geek1.update(geek1YFac)
+		geekAi.update(action - 1)
 		geek2.update(geek2YFac)
 		point = ball.update()
 
-		# -1 -> Geek_1 has scored
-		# +1 -> Geek_2 has scored
-		# 0 -> None of them scored
 		if point == -1:
-			geek1Score += 1
+			geekAiScore += 1
 		elif point == 1:
 			geek2Score += 1
 
-		# Someone has scored
-		# a point and the ball is out of bounds.
-		# So, we reset it's position
 		if point: 
 			ball.reset()
 
+		replay_buffer.push(earlier_state, action, game_state, aiHit)
+
+		earlier_state = game_state
+
+		dqn_agent.train(replay_buffer=replay_buffer)
+
 		# Displaying the objects on the screen
-		geek1.display()
+		geekAi.display()
 		geek2.display()
 		ball.display()
 
 		# Displaying the scores of the players
-		geek1.displayScore("Geek_1 : ", 
-						geek1Score, 100, 20, WHITE)
+		geekAi.displayScore("Geek_1 : ", 
+						geekAiScore, 100, 20, WHITE)
 		geek2.displayScore("Geek_2 : ", 
 						geek2Score, WIDTH-100, 20, WHITE)
 
