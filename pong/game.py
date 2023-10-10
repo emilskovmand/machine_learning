@@ -19,7 +19,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pong")
 
 clock = pygame.time.Clock() 
-FPS = 30
+FPS = 200
 
 # Striker class
 
@@ -143,23 +143,27 @@ class Ball:
 def main():
 	running = True
 
-	replay_buffer = ReplayBuffer(capacity=10000)
+	replay_buffer_1 = ReplayBuffer(capacity=10000)
+	replay_buffer_2 = ReplayBuffer(capacity=10000)
 
 	# Defining the objects
-	geekAi = Striker(20, 0, 10, 100, 10, GREEN)
-	geek = Striker(WIDTH-30, 0, 10, 100, 10, GREEN)
+	geekAi1 = Striker(20, 0, 10, 100, 10, GREEN)
+	geekAi2 = Striker(WIDTH-30, 0, 10, 100, 10, GREEN)
 	ball = Ball(WIDTH//2, HEIGHT//2, 7, 7, WHITE)
 
 	# Initial parameters of the players
-	geekAiScore, geek2Score = 0, 0
+	geekAi1Score, geekAi2Score = 0, 0
 	geek2YFac = 0
 
-	input_dims = np.concatenate((geekAi.get_state(), geek.get_state(), ball.get_state()), dtype=int)
+	input_dims_1 = np.concatenate((geekAi1.get_state(), geekAi2.get_state(), ball.get_state()), dtype=int)
+	input_dims_2 = np.concatenate((geekAi2.get_state(), geekAi1.get_state(), ball.get_state()), dtype=int)
 
 	num_actions = 3
-	dqn_agent = DQNAgent(input_dims=input_dims, num_actions=num_actions)
+	dqn_agent_1 = DQNAgent(input_dims=input_dims_1, num_actions=num_actions)
+	dqn_agent_2 = DQNAgent(input_dims=input_dims_2, num_actions=num_actions)
 
-	earlier_state = input_dims
+	earlier_state_1 = input_dims_1
+	earlier_state_2 = input_dims_2
 
 	while running:
 		screen.fill(BLACK)
@@ -177,46 +181,53 @@ def main():
 				if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
 					geek2YFac = 0
 
-		aiHit = 0
-		if pygame.Rect.colliderect(ball.getRect(), geekAi.getRect()):
+		aiHit_1 = 0
+		aiHit_2 = 0
+		if pygame.Rect.colliderect(ball.getRect(), geekAi1.getRect()):
 			ball.hit()
-			aiHit = 1
-		if pygame.Rect.colliderect(ball.getRect(), geek.getRect()):
+			aiHit_1 = 1
+		if pygame.Rect.colliderect(ball.getRect(), geekAi2.getRect()):
 			ball.hit()
+			aiHit_2 = 1
 
-		game_state = np.concatenate((geekAi.get_state(), geek.get_state(), ball.get_state()))
+		game_state_1 = np.concatenate((geekAi1.get_state(), geekAi2.get_state(), ball.get_state()))
+		game_state_2 = np.concatenate((geekAi2.get_state(), geekAi1.get_state(), ball.get_state()))
 
-		action = dqn_agent.select_action(game_state)
+		ai1_action = dqn_agent_1.select_action(game_state_1)
+		ai2_action = dqn_agent_2.select_action(game_state_2)
 
 		# Updating the objects
-		geekAi.update(action - 1)
-		geek.update(geek2YFac)
+		geekAi1.update(ai1_action - 1)
+		geekAi2.update(ai2_action - 1)
 		point = ball.update()
 
 		if point == -1:
-			geekAiScore += 1
+			geekAi1Score += 1
 		elif point == 1:
-			geek2Score += 1
+			geekAi2Score += 1
 
 		if point: 
 			ball.reset()
 
-		replay_buffer.push(earlier_state, action, game_state, aiHit)
+		replay_buffer_1.push(earlier_state_1, ai1_action, game_state_1, aiHit_1)
+		replay_buffer_2.push(earlier_state_2, ai2_action, game_state_2, aiHit_2)
 
-		earlier_state = game_state
+		earlier_state_1 = game_state_1
+		earlier_state_2 = game_state_2
 
-		dqn_agent.train(replay_buffer=replay_buffer)
+		dqn_agent_1.train(replay_buffer=replay_buffer_1)
+		dqn_agent_2.train(replay_buffer=replay_buffer_2)
 
 		# Displaying the objects on the screen
-		geekAi.display()
-		geek.display()
+		geekAi1.display()
+		geekAi2.display()
 		ball.display()
 
 		# Displaying the scores of the players
-		geekAi.displayScore("AI : ", 
-						geekAiScore, 100, 20, WHITE)
-		geek.displayScore("User : ", 
-						geek2Score, WIDTH-100, 20, WHITE)
+		geekAi1.displayScore("AI_1 : ", 
+						geekAi1Score, 100, 20, WHITE)
+		geekAi2.displayScore("AI_2 : ", 
+						geekAi2Score, WIDTH-100, 20, WHITE)
 
 		pygame.display.update()
 		clock.tick(FPS)	 

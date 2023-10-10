@@ -3,18 +3,21 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
+import math
 import random
 from collections import namedtuple
 from qlearning import DeepQNetwork  # Assuming DeepQNetwork is implemented in qlearning module
 
 class DQNAgent:
-    def __init__(self, input_dims, num_actions, learning_rate=0.001, gamma=0.99, epsilon=1.0, epsilon_decay=0.995):
+    def __init__(self, input_dims, num_actions, learning_rate=0.001, gamma=0.99, epsilon_start=0.9, epsilon_end=0.05, epsilon_decay=0.995):
         self.input_dims = input_dims
         self.num_actions = num_actions
         self.learning_rate = learning_rate
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.epsilon_start = epsilon_start
+        self.epsilon_end = epsilon_end
         self.epsilon_decay = epsilon_decay
+        self.steps_done = 0
         
         self.q_network = DeepQNetwork(learning_rate, input_dims, 24, 24, num_actions)
         self.target_network = DeepQNetwork(learning_rate, input_dims, 24, 24, num_actions)
@@ -22,12 +25,14 @@ class DQNAgent:
         self.target_network.eval()
 
     def select_action(self, state):
-        if np.random.rand() < self.epsilon:
+        sample = np.random.rand()
+        eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * math.exp(-1 * self.steps_done / self.epsilon_decay)
+        self.steps_done += 1
+        if sample < eps_threshold:
             return random.randint(0, self.num_actions - 1)
         else:
             state = T.tensor([state], dtype=T.float32).to(self.q_network.device)
             q_values = self.q_network(state)
-            print("AI action", T.argmax(q_values).item())
             return T.argmax(q_values).item()
 
     def train(self, replay_buffer, batch_size=32):
