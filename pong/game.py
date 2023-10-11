@@ -58,11 +58,8 @@ class Striker:
 	def get_state(self):
 
 		return np.array([
-			self.geek.centerx,
 			self.geek.centery,
-			self.speed,
-			self.height,
-			self.width
+			self.height * 0.5
 		], dtype=int)
 
 	def displayScore(self, text, score, x, y, color):
@@ -165,6 +162,9 @@ def main():
 	earlier_state_1 = input_dims_1
 	earlier_state_2 = input_dims_2
 
+	aiHit_1_hit_last = False
+	aiHit_2_hit_last = False
+
 	while running:
 		screen.fill(BLACK)
 
@@ -184,11 +184,19 @@ def main():
 		aiHit_1 = 0
 		aiHit_2 = 0
 		if pygame.Rect.colliderect(ball.getRect(), geekAi1.getRect()):
-			ball.hit()
-			aiHit_1 = 1
+			if not aiHit_1_hit_last:
+				ball.hit()
+				aiHit_1 = 1
+				aiHit_1_hit_last = True
+		else:
+			aiHit_1_hit_last = False
 		if pygame.Rect.colliderect(ball.getRect(), geekAi2.getRect()):
-			ball.hit()
-			aiHit_2 = 1
+			if not aiHit_2_hit_last:
+				ball.hit()
+				aiHit_2 = 1
+				aiHit_2_hit_last = True
+		else:
+			aiHit_2_hit_last = False
 
 		game_state_1 = np.concatenate((geekAi1.get_state(), ball.get_state()))
 		game_state_2 = np.concatenate((geekAi2.get_state(), ball.get_state()))
