@@ -155,8 +155,8 @@ def main():
 	geekAi1Score, geekAi2Score = 0, 0
 	geek2YFac = 0
 
-	input_dims_1 = np.concatenate((geekAi1.get_state(), geekAi2.get_state(), ball.get_state()), dtype=int)
-	input_dims_2 = np.concatenate((geekAi2.get_state(), geekAi1.get_state(), ball.get_state()), dtype=int)
+	input_dims_1 = np.concatenate((geekAi1.get_state(), ball.get_state()), dtype=int)
+	input_dims_2 = np.concatenate((geekAi2.get_state(), ball.get_state()), dtype=int)
 
 	num_actions = 3
 	dqn_agent_1 = DQNAgent(input_dims=input_dims_1, num_actions=num_actions)
@@ -190,8 +190,8 @@ def main():
 			ball.hit()
 			aiHit_2 = 1
 
-		game_state_1 = np.concatenate((geekAi1.get_state(), geekAi2.get_state(), ball.get_state()))
-		game_state_2 = np.concatenate((geekAi2.get_state(), geekAi1.get_state(), ball.get_state()))
+		game_state_1 = np.concatenate((geekAi1.get_state(), ball.get_state()))
+		game_state_2 = np.concatenate((geekAi2.get_state(), ball.get_state()))
 
 		ai1_action = dqn_agent_1.select_action(game_state_1)
 		ai2_action = dqn_agent_2.select_action(game_state_2)
