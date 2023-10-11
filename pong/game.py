@@ -58,8 +58,8 @@ class Striker:
 	def get_state(self):
 
 		return np.array([
-			self.posx,
-			self.posy,
+			self.geek.centerx,
+			self.geek.centery,
 			self.speed,
 			self.height,
 			self.width
