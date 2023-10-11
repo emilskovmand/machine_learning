@@ -19,8 +19,8 @@ class DQNAgent:
         self.epsilon_decay = epsilon_decay
         self.steps_done = 0
         
-        self.q_network = DeepQNetwork(learning_rate, input_dims, 24, 24, num_actions)
-        self.target_network = DeepQNetwork(learning_rate, input_dims, 24, 24, num_actions)
+        self.q_network = DeepQNetwork(learning_rate, input_dims, 8, num_actions)
+        self.target_network = DeepQNetwork(learning_rate, input_dims, 8, num_actions)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.target_network.eval()
 
